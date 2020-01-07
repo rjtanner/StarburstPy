@@ -10,3 +10,4 @@ Questions about StarburstPy should be directed to me, the author.
     
     Author: Ryan Tanner
     email: ryan.tanner@nasa.gov
+    url: https://github.com/rjtanner/StarburstPy
