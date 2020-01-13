@@ -1,4 +1,4 @@
-# Starburstpy
+# StarburstPy
 
 StarburstPy is a python wrapper for Starburst99 (Leitherer et al. (1999), Leitherer et al. (2014)).
     
