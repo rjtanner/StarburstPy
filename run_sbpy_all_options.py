@@ -202,6 +202,11 @@ sbinput.set_output(writeinput = False,
                    WRLINES = True, 
                    IFASPEC = True)
 
+# Data from Starburst99 is in
+# output_data.data
+#
+# Headers from the output files are found in
+# output_data.headers
 
-sbinput.run_starburst()
+output_data = sbinput.run_starburst()
 

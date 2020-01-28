@@ -27,14 +27,12 @@ sbinput = sb.SbInput(model_name)
 
 # Method for running Starburst99 based on input parameters that have been set.
 
-sbinput.run_starburst()
+output_data = sbinput.run_starburst()
 
-# Output data now sits in a dictionary in the sbinput object.
-# sbinput.out_data
+# Data from Starburst99 is in
+# output_data.data
 #
 # Headers from the output files are found in
-# sbinput.headers
-#
-# This will most likely change in the future. Output data will get its own class.
+# output_data.headers
 #
 # See run_sbpy_all_options.py for examples of all possible input parameters.

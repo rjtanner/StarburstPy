@@ -70,5 +70,5 @@ sbinput.set_output(writeinput = False,
                    WRLINES = True, 
                    IFASPEC = True)
 
-sbinput.run_starburst()
+output_data = sbinput.run_starburst()
 
