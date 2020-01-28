@@ -6,11 +6,12 @@
     email: ryan.tanner@nasa.gov
 """
 
-import os
 import StarburstPy as sb
+import os
+import glob
 import numpy as np
 
-__all__ = ['_file_paths','write_input_txt','write_input_original','read_all_output']
+__all__ = ['_file_paths','write_input_txt','write_input_original','read_output_data']
 
 class _file_paths(object):
     """
@@ -46,6 +47,135 @@ class _file_paths(object):
         self.__SB99_dir = value
 
     SB99_dir = property(_get_SB99_dir, _set_SB99_dir, None, None)
+
+
+def read_output_data(model_name = None, output_dir = None):
+    """
+    Function for reading in all original Starburst99 output files.
+    
+    """
+    
+    if output_dir is None:
+        output_dir = sb.indata.output_dir
+    
+    if not os.path.exists(output_dir):
+        sb.sb_mess.error('{0} does not exist.'.format(output_dir), function = 'read_output_data')
+        
+    sb.sb_mess.message('Looking for output files in {0}.'.format(output_dir), function = 'read_output_data')
+    
+    file_list = []
+    file_endings = ['input','output','yield','power','snr','quanta','color','ewidth','hires',
+                        'ifaspec','irfeature','ovi','spectrum','sptyp1','sptyp2','uvline','wrlines']
+    
+    if model_name is None:
+        sb.sb_mess.message('No model name given. Attempting to find one.', function = 'read_output_data')
+        model_found = False
+        
+        for fe in file_endings:
+            possible_file = glob.glob(os.path.join(output_dir,'*.'+fe))[0]
+            if os.path.isfile(possible_file):
+                model_name = os.path.splitext(os.path.basename(possible_file))[0]
+                model_found = True
+                break
+        if model_found:   
+            sb.sb_mess.message('Model {0} found.'.format(model_name), function = 'read_output_data')
+        else:
+            sb.sb_mess.error('Could not find Starburst99 model data in {0}.'.format(output_dir), function = 'read_output_data')
+    
+    for fe in file_endings:
+        possible_file = os.path.join(output_dir,'{0}.'.format(model_name)+fe)
+        if os.path.isfile(possible_file):
+            file_list.append(possible_file)
+            
+    if len(file_list) == 0:
+        sb.sb_mess.error('{0} contains no usable output files for {1} model.'.format(output_dir,model_name), function = 'read_output_data')
+    
+    data = {}
+    headers = {}
+    
+    fdict = {'color' : ['color', 'Time', '130-V', '210-V', 'U-B', 'B-V', 'V-R', 'V-I', 
+                           'V-J', 'V-H', 'V-K', 'V-L', 'Mag_V', 'Mag_B', 'Mag_Bol'],
+                'ewidth' : ['recombination_lines', 'Time', 'Continuum_H_A', 'Luminosity_H_A', 'Equ_width_H_A', 
+                            'Continuum_H_B', 'Luminosity_H_B', 'Equ_width_H_B', 
+                            'Continuum_P_B', 'Luminosity_P_B', 'Equ_width_P_B', 
+                            'Continuum_B_G', 'Luminosity_B_G', 'Equ_width_B_G'],
+                'hires' : ['hires_spectra', 'Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                'ifaspec' : ['infrared_spectra', 'Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                'ovi' : ['uv_spectra1', 'Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                'power' : ['power', 'Time', 'Power_All', 'Power_OB', 'Power_RSG','Power_LBV','Power_WR',
+                           'Energy',
+                           'Momentum_All', 'Momentum_OB', 'Momentum_RSG','Momentum_LBV','Momentum_WR'],
+                'quanta' : ['quanta', 'Time', 'HI_rate', 'HI%', 
+                            'HeI_rate', 'HeI%',
+                            'HeII_rate', 'HeII%', 'Log_Luminosity'],
+                'snr' : ['snr', 'Time', 'All_Rate', 'All_Power', 'All_Energy', 
+                         'Type_IB_Rate', 'Type_IB_Power', 'Type_IB_Energy', 
+                         'Typical_Mass', 'Lowest_Mass', 
+                         'Stars_SN_Power', 'Stars_SN_Energy'],
+                'spectrum' : ['spectrum', 'Time', 'Wavelength', 'Total', 'Stellar','Nebular'],
+                'sptyp1' : ['spectral_type1', 'Time', 'All','O','WR','WN','WC','WR/O','WC/WN'],
+                'uvline' : ['uv_spectra2', 'Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                'yield' : ['chemical_yields','Time','H','He','C','N','O','Mg','Si','S','Fe',
+                           'All_winds','All_SN','All_winds_SN','Total_mass']}
+
+    for file in file_list:
+        dkey = os.path.splitext(os.path.basename(file))[1][1:]
+        if not (dkey == 'input' or dkey == 'output' or dkey == 'irfeature' or 
+                dkey == 'sptyp2' or dkey == 'wrlines'):
+            data[fdict[dkey][0]], headers[fdict[dkey][0]] = parse_file(file,fdict[dkey][1:])
+    
+    return data,headers
+
+
+def parse_file(file_path,dkeys):
+    """
+    General function for parsing **almost** all Starburst99 output files.
+    """
+
+    with open(file_path) as fdata:
+        fc = fdata.readlines()
+    
+    nrows = len(fc)
+    is_header = True
+    hline = 0
+    header = []
+    data = {}
+    
+    while is_header:
+        header.append(fc[hline].replace('\n',''))
+        sline = header[hline].split()
+        if len(sline) > 0:
+            if sline[0] == 'TIME':
+                is_header = False
+        hline += 1
+        
+    sline = fc[hline].replace('\n','').split()
+    if sline[0] == '[s^-1]':
+        hline += 1
+    
+    nrows = nrows - hline
+    
+    for i in range(len(dkeys)):
+        data[dkeys[i]] = np.zeros([nrows])
+        
+    for line in range(nrows):
+        sline = fc[line+hline].replace('\n','').split()
+        res = [float(i) for i in sline]
+        for i in range(len(dkeys)):
+            data[dkeys[i]][line] = res[i]
+            
+    if data['Time'][0] == data['Time'][1]:
+        jj = len(data['Time'])
+        nx = 1
+        while data['Time'][nx] == data['Time'][nx-1]:
+            nx += 1
+        ny = int(jj/nx)
+        for i in range(len(dkeys)):
+            data[dkeys[i]] = np.array(data[dkeys[i]]).reshape(ny,nx)
+        data['Time'] = data['Time'][:,0]
+        data['Wavelength'] = data['Wavelength'][0,:]
+            
+    return data,header
 
 
 def write_input_txt(inputs, full_name):
