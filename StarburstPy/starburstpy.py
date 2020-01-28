@@ -544,16 +544,72 @@ class SbInput(object):
         """
         Method to run the starburst model. Simply calls the function "run_starburst" defined below.
         """
-        
-        self.out_headers,self.out_data = run_starburst(self, run_SB99 = run_SB99)
+        output_data = sb.out_data(self.model_name)
+        output_data = run_starburst(self, run_SB99 = run_SB99)
+        return output_data
         
         
 class out_data(object):
     
-    def __init__(self, model_name):
+    def __init__(self, model_name, output_dir = None):
         
         self.model_name = model_name
+        if output_dir is None:
+            self.output_dir = sb.indata.output_dir
+        else:
+            self.output_dir = output_dir
+        self.data = {}
+        self.headers = {}
+        self.fname2dname = {'color' : 'color',
+                    'ewidth' : 'recombination_lines',
+                    'hires' : 'hires_spectra',
+                    'ifaspec' : 'infrared_spectra',
+                    'ovi' : 'uv_spectra1',
+                    'power' : 'power',
+                    'quanta' : 'quanta',
+                    'snr' : 'snr',
+                    'spectrum' : 'spectrum',
+                    'sptyp1' : 'spectral_type1',
+                    'uvline' : 'uv_spectra2',
+                    'yield' : 'chemical_yields'}
+        self.data_dict = {'color' : ['Time', '130-V', '210-V', 'U-B', 'B-V', 'V-R', 'V-I', 
+                               'V-J', 'V-H', 'V-K', 'V-L', 'Mag_V', 'Mag_B', 'Mag_Bol'],
+                    'recombination_lines' : ['Time', 'Continuum_H_A', 'Luminosity_H_A', 'Equ_width_H_A', 
+                                'Continuum_H_B', 'Luminosity_H_B', 'Equ_width_H_B', 
+                                'Continuum_P_B', 'Luminosity_P_B', 'Equ_width_P_B', 
+                                'Continuum_B_G', 'Luminosity_B_G', 'Equ_width_B_G'],
+                    'hires_spectra' : ['Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                    'infrared_spectra' : ['Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                    'uv_spectra1' : ['Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                    'power' : ['Time', 'Power_All', 'Power_OB', 'Power_RSG','Power_LBV','Power_WR',
+                               'Energy','Momentum_All', 'Momentum_OB', 'Momentum_RSG','Momentum_LBV','Momentum_WR'],
+                    'quanta' : ['Time', 'HI_rate', 'HI%', 
+                                'HeI_rate', 'HeI%',
+                                'HeII_rate', 'HeII%', 'Log_Luminosity'],
+                    'snr' : ['Time', 'All_Rate', 'All_Power', 'All_Energy', 
+                             'Type_IB_Rate', 'Type_IB_Power', 'Type_IB_Energy', 
+                             'Typical_Mass', 'Lowest_Mass', 
+                             'Stars_SN_Power', 'Stars_SN_Energy'],
+                    'spectrum' : ['Time', 'Wavelength', 'Total', 'Stellar','Nebular'],
+                    'spectral_type1' : ['Time', 'All','O','WR','WN','WC','WR/O','WC/WN'],
+                    'uv_spectra2' : ['Time', 'Wavelength', 'Log_Luminosity', 'Normalized'],
+                    'chemical_yields' : ['Time','H','He','C','N','O','Mg','Si','S','Fe',
+                               'All_winds','All_SN','All_winds_SN','Total_mass']}
+        
      
+    def read_data_files(self, model_name = None, output_dir = None):
+        """
+        Method for reading in Starburst99 output. This can be used to load existing 
+        data.
+        """
+        
+        if model_name is None:
+            model_name = self.model_name
+            
+        if output_dir is None:
+            output_dir = self.output_dir
+        
+        self.data, self.headers = sb.read_output_data(model_name = model_name, output_dir = output_dir)
         
         
 def run_starburst(input_param, run_SB99 = True):
@@ -570,7 +626,7 @@ def run_starburst(input_param, run_SB99 = True):
            Convert to hdf5 if necessary.
            
     """
-
+    output_data = sb.out_data(input_param.model_name)
     
     """
     Step 1
@@ -592,15 +648,13 @@ def run_starburst(input_param, run_SB99 = True):
         file_name = input_param.model_name+'.input'
         full_name = os.path.join(output_dir,file_name)
         sb.write_input_original(input_param, full_name)
-        run_original_SB99(input_param.model_name)
+        output_data.data, output_data.headers = run_original_SB99(input_param.model_name)
         
     """
     Step 3
     """
-    
-    headers,data = sb.read_all_output(input_param.model_name)
 
-    return headers,data
+    return output_data
 
 
 def run_original_SB99(model_name):
@@ -613,10 +667,12 @@ def run_original_SB99(model_name):
     file_name = model_name+'.input'
     full_name = os.path.join(output_dir,file_name)
     if not os.path.exists(full_name):
-        sb.sb_mess.error('Input File does not exist.','run_original_SB99')
+        sb.sb_mess.error('Input File does not exist in {0}.'.format(output_dir),'run_original_SB99')
     run_file = os.path.join(output_dir,'go_galaxy.sh')
     if os.path.exists(run_file):
         os.remove(run_file)
+    if not os.path.exists(os.path.join(sb.indata.SB99_dir,'galaxy')):
+        sb.sb_mess.error('Starburst99 exacutable not found in {0} directory.'.format(sb.indata.SB99_dir),'run_original_SB99')
         
     f = open(run_file, 'w')
     
@@ -671,4 +727,8 @@ def run_original_SB99(model_name):
     f.close()
     
     subprocess.call(['/bin/csh','-c',run_file])
+    
+    data, headers = sb.read_output_data(model_name = model_name, output_dir = output_dir)
+    
+    return data, headers
     
