@@ -60,7 +60,7 @@ class sb_messages(object):
         """
         if self.rank > 1:
             self.print_single('warning', text, function=function)
-        self.buffer['warning'].append('warning: {0}: {1}'.format(function, text))
+        self.buffer['warnings'].append('warning: {0}: {1}'.format(function, text))
         
         
     def error(self, text, function = None, exception = None):
