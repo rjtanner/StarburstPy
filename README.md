@@ -6,9 +6,13 @@ The Starburst99 Fortan code must be downloaded and compiled before this will wor
     
 I do not maintain the Starburst99 code so I cannot answer (most) technical questions about it. Questions about Starburst99 should be directed to Claus Leitherer.
 
-Example scripts can be found at https://github.com/rjtanner/StarburstPy. 
+Example scripts can be found at https://github.com/rjtanner/StarburstPy. Code can also be found at https://pypi.org/project/StarburstPy/.
 
 StarburstPy can also be used to read in Starburst99 data files generated previously. See 'read_sb_files.py' for an example.
+
+Download from github or install using 
+
+pip install StarburstPy
 
 Questions about StarburstPy should be directed to me, the author. 
     
