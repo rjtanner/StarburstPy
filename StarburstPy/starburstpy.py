@@ -13,24 +13,23 @@ import os
 import numpy as np
 import subprocess
 
-
 class SbInput(object):
     
-    def __init__(self, model_name, rank = 2):
+    def __init__(self, model_name, chatter = 2):
         """
         Creates starburst input object.
         
             - A model name is required.
         
-            - Optional: rank, this controls how much output is printed to stdout.
-                rank = 0 : No output
-                rank = 1 : Only errors
-                rank = 2 : Errors and warnings [default]
-                rank = 3 : Errors, warnings, and messages
+            - Optional: chatter, this controls how much output is printed to stdout.
+                chatter = 0 : No output
+                chatter = 1 : Only errors
+                chatter = 2 : Errors and warnings [default]
+                chatter = 3 : Errors, warnings, and messages
         """
         
         self.model_name = model_name
-        self.sb_messages = sb.sb_messages(rank = rank)
+        self.sb_messages = sb.sb_messages(chatter = chatter)
         self.init_default()
         
         
@@ -100,7 +99,9 @@ class SbInput(object):
             User can choose a preset: IMF = 'Kroupa' or IMF = 'Salpeter'
             Or user can set their own IMF exponents and bounds
             
-            IMF: [str] Chose a preset IMF, default (None) Kroupa
+            IMF: [str] Chose a preset IMF. 
+                        -- Kroupa [default]
+                        -- Salpeter
             IMF_exp: [list] List of IMF exponents, e.g. [1.3,2.3]
             IMF_bound: [list] IMF mass boundaries. The number of boundaries MUST be one more
                        than the number of exponents. Ex. if IMF_exp = [1.3,2.3] then
@@ -234,8 +235,11 @@ class SbInput(object):
     def set_wind_model(self, wind = None):
         """
         Selects model to calculate wind power.
-            wind: [str] Possible values [Evolution, Emperical, Theoretical, Elson]
-                default: Evolution
+            wind: [str] Possible values 
+                    -- Evolution[default]
+                    -- Emperical
+                    -- Theoretical
+                    -- Elson
         """
         
         models = ['Evolution', 'Emperical', 'Theoretical', 'Elson']
@@ -282,7 +286,11 @@ class SbInput(object):
     def set_mass_grid(self, mass_grid = None):
         """
         Set mass grid.
-            mass_grid: [str] Possible values are ['Full_Isochrone', 'Isochrone_Large', 'Large', 'Small']
+            mass_grid: [str] Possible values are:
+                        -- Full_Isochrone [default]
+                        -- Isochrone_Large
+                        -- Large
+                        -- Small
         """
         
         grids = ['Full_Isochrone', 'Isochrone_Large', 'Large', 'Small']
@@ -298,7 +306,7 @@ class SbInput(object):
     def set_mass_track(self, mass_range = None):
         """
         For debugging and special use. See original note in Starburst99.
-        For now set to null [0,0]. RT 12/17/2019
+        For now set to null [0,0] by default. RT 12/17/2019
         """
         
         if mass_range is None:
@@ -321,8 +329,12 @@ class SbInput(object):
     def set_atmo(self, atmo = None):
         """
         Selects model atmosphere for low resolution spectra output.
-            atmo: [str] Possible values ['Planck', 'Lejeune', 'Lejuene-Schmutz', 'Lejeune-Hiller', 'Pauldrach-Hiller']
-                default: 'Pauldrach-Hiller'
+            atmo: [str] Possible values:
+                        -- Planck
+                        -- Lejeune
+                        -- Lejuene-Schmutz
+                        -- Lejeune-Hiller
+                        -- Pauldrach-Hiller [default]
         """
         
         models = ['Planck', 'Lejeune', 'Lejuene-Schmutz', 'Lejeune-Hiller', 'Pauldrach-Hiller']
@@ -338,7 +350,11 @@ class SbInput(object):
     def high_res_Z(self, Z = None):
         """
         Sets metallicity for the optical high res spectra library.
-            Options are: Z = [0.001, 0.008, 0.02, 0.04]
+            Options are: Z = 
+                            -- 0.001
+                            -- 0.008
+                            -- 0.02 [default]
+                            -- 0.04
         """
         
         warn = False
@@ -375,7 +391,9 @@ class SbInput(object):
         
     def uv_line_lib(self, lib = None):
         """
-            UV_line_lib: [str] Choice of the UV spectral library, Solar or LMC/SMC
+            UV_line_lib: [str] Choice of the UV spectral library:
+                            -- Solar [default]
+                            -- LMC/SMC
         """
         
         libs = ['Solar', 'LMC/SMC']
@@ -423,7 +441,7 @@ class SbInput(object):
                              
             -- out_type   -- Output filetypes.
                 Possible values:
-                    - original -- Keeps files in the original Starburst99 file format.
+                    - original -- [default] Keeps files in the original Starburst99 file format.
                     - hdf5 -- Converts the original Starburst99 files into hdf5 file format.
                     
         Output files controled by True/False. By default all are True, except HRD (3).
@@ -447,7 +465,7 @@ class SbInput(object):
            14 model_name.WRLINES  Calculation of the most important WR emission lines. Depends on 7 and 1.
            15 model_name.IFASPEC  Calculation of a high-resolution UV line spectrum from model atmospheres, as opposed to using an empirical library.
         
-        Dependancies: (xxx --> depends on yyy)
+        Dependencies: (xxx --> depends on yyy)
         
             1 --->  7
             2 --->  4
@@ -462,7 +480,7 @@ class SbInput(object):
         """
         
         """
-        Check dependancies.
+        Check dependencies.
         """
         
         if QUANTA and not SPECTRUM:
@@ -550,6 +568,24 @@ class SbInput(object):
         
         
 class out_data(object):
+    """
+        Class for holding all output data. Contains a method for reading in data
+        from previous runs.
+        
+        Contains four dictionaries:
+            -- data        : Contains all output data in sub-dictionaries.
+                             Each entry in 'data' is a dictionary for each output file.
+                             Columns of data are stored as numpy arrays.
+                             
+            -- headers     : Contains headers from output files.
+            
+            -- fname2dname : Contains the original file endings and 
+                             corresponding dictionary key in 'data'.
+                             
+            -- data_dict   : Each item in the dictionary corresponds to an output
+                             file and contains a list of names of numpy arrays in
+                             the 'data' dictionary.
+    """
     
     def __init__(self, model_name, output_dir = None):
         
@@ -623,7 +659,7 @@ def run_starburst(input_param, run_SB99 = True):
         2. Run Starburst99.
         
         3. Read output files written by Starburst99. 
-           Convert to hdf5 if necessary.
+           Convert to hdf5 if necessary. [Not implemented yet.]
            
     """
     output_data = sb.out_data(input_param.model_name)
@@ -659,7 +695,11 @@ def run_starburst(input_param, run_SB99 = True):
 
 def run_original_SB99(model_name):
     """
+    Runs the original Fortran77 code of Starburst99. Creates a 'go_galaxy.sh' script
+    to run the code. This is the same script that comes with the code.
     
+    Output directory and Starburst99 directory need to be set previously in 
+    sb.indata.output_dir and sb.indata.SB99_dir respectively.
     """
     
     output_dir = sb.indata.output_dir
